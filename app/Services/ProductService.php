@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Filters\ProductFilter;
 use App\Models\Product;
 use App\Repositories\ProductRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\CursorPaginator;
 
 class ProductService
 {
@@ -18,6 +20,16 @@ class ProductService
     public function listAll(): Collection
     {
         return $this->repository->all();
+    }
+
+    /**
+     * Search products with filters and cursor-based pagination.
+     *
+     * @return CursorPaginator<int, Product>
+     */
+    public function search(ProductFilter $filter): CursorPaginator
+    {
+        return $this->repository->search($filter);
     }
 
     public function findById(int $id): ?Product

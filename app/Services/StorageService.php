@@ -13,7 +13,7 @@ class StorageService
     private function getDisk(): string
     {
         $defaultDisk = config('filesystems.default', 'public');
-        
+
         return $defaultDisk === 'local' ? 'public' : $defaultDisk;
     }
 

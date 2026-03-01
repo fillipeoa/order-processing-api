@@ -2,8 +2,10 @@
 
 namespace App\Repositories;
 
+use App\Filters\ProductFilter;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\CursorPaginator;
 
 interface ProductRepositoryInterface
 {
@@ -30,4 +32,11 @@ interface ProductRepositoryInterface
      * @param  list<int>  $categoryIds
      */
     public function syncCategories(Product $product, array $categoryIds): void;
+
+    /**
+     * Search products with filters and cursor-based pagination.
+     *
+     * @return CursorPaginator<int, Product>
+     */
+    public function search(ProductFilter $filter): CursorPaginator;
 }

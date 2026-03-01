@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Filters\ProductFilter;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Http\Requests\UploadProductImageRequest;
@@ -10,6 +11,7 @@ use App\Models\Product;
 use App\Services\ProductService;
 use App\Services\StorageService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 class ProductController extends Controller
@@ -20,14 +22,20 @@ class ProductController extends Controller
     ) {}
 
     /**
-     * Display a listing of the resource.
+     * Display a listing of the resource with optional search/filter.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $products = $this->productService->listAll();
+        $filter = ProductFilter::fromArray($request->query());
+        $products = $this->productService->search($filter);
 
         return response()->json([
-            'data' => ProductResource::collection($products),
+            'data' => ProductResource::collection($products->items()),
+            'meta' => [
+                'next_cursor' => $products->nextCursor()?->encode(),
+                'prev_cursor' => $products->previousCursor()?->encode(),
+                'per_page' => $products->perPage(),
+            ],
         ]);
     }
 
