@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateProductRequest;
 use App\Http\Requests\UploadProductImageRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Services\CacheService;
 use App\Services\ProductService;
 use App\Services\StorageService;
 use Illuminate\Http\JsonResponse;
@@ -16,9 +17,12 @@ use Illuminate\Support\Facades\Gate;
 
 class ProductController extends Controller
 {
+    private const CACHE_TTL = 1800; // 30 minutes
+
     public function __construct(
         private readonly ProductService $productService,
         private readonly StorageService $storageService,
+        private readonly CacheService $cacheService,
     ) {}
 
     /**
@@ -67,10 +71,19 @@ class ProductController extends Controller
      */
     public function show(Product $product): JsonResponse
     {
-        $product->load(['user', 'categories']);
+        /** @var Product $cached */
+        $cached = $this->cacheService->remember(
+            "products:{$product->id}",
+            self::CACHE_TTL,
+            function () use ($product) {
+                $product->load(['user', 'categories']);
+
+                return $product;
+            }
+        );
 
         return response()->json([
-            'data' => new ProductResource($product),
+            'data' => new ProductResource($cached),
         ]);
     }
 
@@ -88,6 +101,8 @@ class ProductController extends Controller
         $product = $this->productService->update($product, $validated, $categoryIds);
         $product->load(['user', 'categories']);
 
+        $this->cacheService->forget("products:{$product->id}");
+
         return response()->json([
             'message' => 'Product updated successfully.',
             'data' => new ProductResource($product),
@@ -101,7 +116,10 @@ class ProductController extends Controller
     {
         Gate::authorize('delete', $product);
 
+        $productId = $product->id;
         $this->productService->delete($product);
+
+        $this->cacheService->forget("products:{$productId}");
 
         return response()->json([
             'message' => 'Product deleted successfully.',
@@ -124,6 +142,8 @@ class ProductController extends Controller
 
         $product->update(['image_path' => $path]);
         $product->load(['user', 'categories']);
+
+        $this->cacheService->forget("products:{$product->id}");
 
         return response()->json([
             'message' => 'Product image uploaded successfully.',
