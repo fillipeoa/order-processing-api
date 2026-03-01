@@ -21,4 +21,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('categories', CategoryController::class)->only(['store', 'update', 'destroy']);
     Route::apiResource('products', ProductController::class)->only(['store', 'update', 'destroy']);
+    Route::post('/products/{product}/image', [ProductController::class, 'uploadImage']);
 });

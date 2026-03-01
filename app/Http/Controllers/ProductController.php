@@ -4,16 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
+use App\Http\Requests\UploadProductImageRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Services\ProductService;
+use App\Services\StorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 
 class ProductController extends Controller
 {
     public function __construct(
-        private readonly ProductService $productService
+        private readonly ProductService $productService,
+        private readonly StorageService $storageService,
     ) {}
 
     /**
@@ -94,6 +97,29 @@ class ProductController extends Controller
 
         return response()->json([
             'message' => 'Product deleted successfully.',
+        ]);
+    }
+
+    /**
+     * Upload an image for the product.
+     */
+    public function uploadImage(UploadProductImageRequest $request, Product $product): JsonResponse
+    {
+        Gate::authorize('update', $product);
+
+        // Delete old image if exists
+        if ($product->image_path) {
+            $this->storageService->delete($product->image_path);
+        }
+
+        $path = $this->storageService->upload($request->file('image'), 'products');
+
+        $product->update(['image_path' => $path]);
+        $product->load(['user', 'categories']);
+
+        return response()->json([
+            'message' => 'Product image uploaded successfully.',
+            'data' => new ProductResource($product),
         ]);
     }
 }
